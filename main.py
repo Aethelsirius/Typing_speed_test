@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QStackedWidget, QPushButton, QSizePolicy, QLabel, QLineEdit, QVBoxLayout
+from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QStackedWidget, QPushButton, QSizePolicy, QLabel, QLineEdit, QHBoxLayout, QVBoxLayout
 from PyQt5.QtCore import *
 import sys
 import time
@@ -41,12 +41,14 @@ class Menu(QWidget):
         self.button_graph.move(200,230)
     
 
-class TS_Test(QWidget, QObject):
+class TS_Test(QWidget):
     def __init__(self):
         QWidget.__init__(self)
         f = open('paragraphs.txt').read()
         self.sentences = f.split('BREAK\n')
         self.sentence = random.choice(self.sentences)
+        self.sentence = self.sentence.strip('\n')
+        self.word = self.sentence.split()
         self.setStyleSheet("QLabel{font-size: 15px;}")
 
         self.initUI()
@@ -59,12 +61,18 @@ class TS_Test(QWidget, QObject):
 
         self.lineEdit = QLineEdit()
         self.label = QLabel()
+        self.accuracy_label = QLabel()
+        self.wpm_label = QLabel()
         self.pismeno = self.lineEdit.text()
         self.prve = self.sentence[0]
         self.layout = QVBoxLayout(self)
 
         self.layout.addWidget(self.label)
         self.layout.addWidget(self.lineEdit)
+        self.layout.addWidget(self.accuracy_label)
+        self.layout.addWidget(self.wpm_label)
+
+        
         
         self.label.setText(self.sentence)
        
@@ -79,21 +87,39 @@ class TS_Test(QWidget, QObject):
         while True:
             if len(self.lineEdit.text()) > 0:
                 if self.lineEdit.text()[0] == self.prve:
-                    print('gut')
                     t_time = threading.Thread(target=self.time_thread)
                     t_time.start()
                     break
-                #else:
-                #    print('zle')
-
+                
     def time_thread(self):
+        print('start')
         timer_start = time.perf_counter()
+        self.correct_char = 0
+        
         
         while True:
-            if len(self.lineEdit.text()) >= 10:
+            if (len(self.lineEdit.text()) == len(self.sentence)) and (self.lineEdit.text().split()[-1] == self.word[-1]):
+                self.written_word = self.lineEdit.text().split(' ')
                 timer_stop = time.perf_counter()
-                print(f'time is {timer_stop - timer_start:0.3f}')
+                timer = timer_stop - timer_start
+
+                self.wpm = len(self.written_word) / timer * 60
+
+                for i in range(len(self.sentence)):
+                    if self.lineEdit.text()[i] == self.sentence[i]:
+                        self.correct_char += 1
+                self.accuracy = self.correct_char / len(self.sentence) * 100
+
+                print(f"Accuracy = {self.correct_char / len(self.sentence) * 100}")
+                print(f'WPM: {self.wpm:0.3f}')
+                
+                self.accuracy_label.setText(f'Accuracy = {self.accuracy}%')
+                self.wpm_label.setText(f'WPM: {self.wpm:0.3f}')
+
                 break
+
+    def Reset(self):
+        pass
 
 class Statistics(QWidget):
     def __init__(self):
