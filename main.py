@@ -1,9 +1,9 @@
-from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QStackedWidget, QPushButton, QSizePolicy, QLabel, QLineEdit, QHBoxLayout, QVBoxLayout
+from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QStackedWidget, QPushButton, QSizePolicy, QLabel, QLineEdit, QHBoxLayout, QVBoxLayout, QShortcut
 from PyQt5.QtCore import *
 import sys
 import time
 import random
-import threading
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -17,8 +17,8 @@ class MainWindow(QMainWindow):
         stacked.addWidget(Menu())
         stacked.addWidget(TS_Test())
         stacked.addWidget(Statistics())
-
-        stacked.setCurrentIndex(1)          #* len na test
+ 
+        stacked.setCurrentIndex(1)          #* test only
 
 
 class Menu(QWidget):
@@ -46,80 +46,108 @@ class TS_Test(QWidget):
         QWidget.__init__(self)
         f = open('paragraphs.txt').read()
         self.sentences = f.split('BREAK\n')
-        self.sentence = random.choice(self.sentences)
-        self.sentence = self.sentence.strip('\n')
-        self.word = self.sentence.split()
+        global sentence
+        sentence = random.choice(self.sentences)
+        sentence = sentence.strip('\n')
+
         self.setStyleSheet("QLabel{font-size: 15px;}")
 
+        self.worker = Worker()
+        self.worker_thread = QThread()
+        self.worker.float_signal.connect(self.update)
+        self.worker.moveToThread(self.worker_thread)
+        self.worker.finished.connect(self.worker_thread.quit)
+        self.worker_thread.started.connect(self.worker.run)
+        self.worker_thread.start()
+
         self.initUI()
-        self.start_thread()
 
     def initUI(self):
         self.button_back = QPushButton(self)
         self.button_back.clicked.connect(lambda: stacked.setCurrentIndex(0))
         self.button_back.move(30,50)
 
-        self.lineEdit = QLineEdit()
+        global lineEdit
+        lineEdit = QLineEdit()
         self.label = QLabel()
         self.accuracy_label = QLabel()
         self.wpm_label = QLabel()
-        self.pismeno = self.lineEdit.text()
-        self.prve = self.sentence[0]
+        self.reset_button = QPushButton()
+
+        self.first_letter = sentence[0]
+
         self.layout = QVBoxLayout(self)
 
         self.layout.addWidget(self.label)
-        self.layout.addWidget(self.lineEdit)
-        self.layout.addWidget(self.accuracy_label)
+        self.layout.addWidget(lineEdit)
         self.layout.addWidget(self.wpm_label)
-
+        self.layout.addWidget(self.accuracy_label)
+        self.layout.addWidget(self.reset_button)
         
-        
-        self.label.setText(self.sentence)
-       
+        self.reset_button.clicked.connect(self.Reset)
+        self.label.setText(sentence)
+    
         self.layout.setContentsMargins(250,250,250,300)
-        self.setLayout(self.layout)
-
-    def start_thread(self):                                                              #* while cyklus by bez tohto nefungoval
-        t_start=threading.Thread(target=self.start)
-        t_start.start()                              
-
-    def start(self):
-        while True:
-            if len(self.lineEdit.text()) > 0:
-                if self.lineEdit.text()[0] == self.prve:
-                    t_time = threading.Thread(target=self.time_thread)
-                    t_time.start()
-                    break
+        self.setLayout(self.layout)                             
                 
-    def time_thread(self):
-        print('start')
-        timer_start = time.perf_counter()
-        self.correct_char = 0
-        
-        
-        while True:
-            if (len(self.lineEdit.text()) == len(self.sentence)) and (self.lineEdit.text().split()[-1] == self.word[-1]):
-                self.written_word = self.lineEdit.text().split(' ')
-                timer_stop = time.perf_counter()
-                timer = timer_stop - timer_start
+    def update(self, wpm_val, acc_val):
+        self.wpm_label.setText(f'WPM: {wpm_val:0.3f}')
 
-                self.wpm = len(self.written_word) / timer * 60
-
-                for i in range(len(self.sentence)):
-                    if self.lineEdit.text()[i] == self.sentence[i]:
-                        self.correct_char += 1
-                self.accuracy = self.correct_char / len(self.sentence) * 100
-
-                print(f"Accuracy = {self.correct_char / len(self.sentence) * 100}")
-                print(f'WPM: {self.wpm:0.3f}')
-                
-                self.accuracy_label.setText(f'Accuracy = {self.accuracy}%')
-                self.wpm_label.setText(f'WPM: {self.wpm:0.3f}')
-
-                break
+        if acc_val % 1 == 0:
+            self.accuracy_label.setText(f'ACC: {int(acc_val)}%')
+        else:
+            self.accuracy_label.setText(f'ACC: {acc_val:0.2f}%')
 
     def Reset(self):
-        pass
+        print('reset')
+        lineEdit.clear()
+        self.label.clear()
+        self.wpm_label.clear()
+        self.accuracy_label.clear()
+
+        sentence = random.choice(self.sentences)
+        sentence = sentence.strip('\n')
+        self.label.setText(sentence)
+        self.start()
+
+
+class Worker(QObject):
+    finished = pyqtSignal()
+    float_signal = pyqtSignal(float, float)
+    
+    @pyqtSlot()
+    def run(self):
+        while True:
+            print('important')
+            if len(lineEdit.text()) > 0 and lineEdit.text()[0] == sentence[0]:
+                timer_start = time.perf_counter()
+                correct_char = 0
+                break
+
+        while True:     
+            print('IMPORTANT')
+            if (len(lineEdit.text()) == len(sentence)) and (lineEdit.text().split()[-1] == sentence.split()[-1]):
+                #print(4)
+                
+                written_word = lineEdit.text().split(' ')
+                timer_stop = time.perf_counter()
+                timer = timer_stop - timer_start
+                print(timer)
+
+                wpm = len(written_word) / timer * 60
+
+                for i in range(len(sentence)):
+                    if lineEdit.text()[i] == sentence[i]:
+                        correct_char += 1
+                accuracy = correct_char / len(sentence) * 100
+
+                print(f"Accuracy = {correct_char / len(sentence) * 100}")
+                print(f'WPM: {wpm:0.3f}')
+                
+                self.float_signal.emit(wpm, accuracy)
+                break
+        self.finished.emit()
+
 
 class Statistics(QWidget):
     def __init__(self):
@@ -144,3 +172,5 @@ if __name__ == "__main__":
 #TODO 1) Menu with two typing mods: 1. basic test 2. training mod similiar to keybr.com
 #TODO 2) Collect data from both mods and save it to .txt file, than make statistics from said data
 #TODO 3) opravit v class TS_Test "f = open()" na "with open() as f:"
+#TODO 4) Reset Button
+#TODO 5) Saving WPM and Accuracy to data.txt
