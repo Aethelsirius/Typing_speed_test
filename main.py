@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QStackedWidget, QPushButton, QSizePolicy, QLabel, QLineEdit, QHBoxLayout, QVBoxLayout, QShortcut
+from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QStackedWidget, QPushButton, QSizePolicy, QLabel, QLineEdit, QHBoxLayout, QVBoxLayout, QShortcut, QComboBox
 from PyQt5.QtCore import *
 import sys
 import time
@@ -43,20 +43,17 @@ class Menu(QWidget):
 
 class TS_Test(QWidget):
     def __init__(self):
-        QWidget.__init__(self)
-        f = open('paragraphs.txt').read()
-        self.sentences = f.split('BREAK\n')
-        global sentence
-        sentence = random.choice(self.sentences)
-        sentence = sentence.strip('\n')
+        QWidget.__init__(self)     
 
         self.setStyleSheet("QLabel{font-size: 15px;}")
 
         self.worker = Worker()
         self.worker_thread = QThread()
+        self.worker.changed_signal.connect(self.difficulty)
         self.worker.float_signal.connect(self.update)
         self.worker.moveToThread(self.worker_thread)
         self.worker.finished.connect(self.worker_thread.quit)
+        self.worker_thread.started.connect(self.worker.change_difficulty)
         self.worker_thread.started.connect(self.worker.run)
         self.worker_thread.start()
 
@@ -67,14 +64,16 @@ class TS_Test(QWidget):
         self.button_back.clicked.connect(lambda: stacked.setCurrentIndex(0))
         self.button_back.move(30,50)
 
-        global lineEdit
+        global lineEdit, dropDown
         lineEdit = QLineEdit()
         self.label = QLabel()
         self.accuracy_label = QLabel()
         self.wpm_label = QLabel()
         self.reset_button = QPushButton()
 
-        self.first_letter = sentence[0]
+        dropDown = QComboBox(self)
+        dropDown.addItems(['Easy','Medium','Hard'])
+
 
         self.layout = QVBoxLayout(self)
 
@@ -85,7 +84,7 @@ class TS_Test(QWidget):
         self.layout.addWidget(self.reset_button)
         
         self.reset_button.clicked.connect(self.Reset)
-        self.label.setText(sentence)
+        
     
         self.layout.setContentsMargins(250,250,250,300)
         self.setLayout(self.layout)                             
@@ -93,26 +92,48 @@ class TS_Test(QWidget):
     def update(self, wpm_val, acc_val):
         self.wpm_label.setText(f'WPM: {wpm_val:0.3f}')
 
+        data = [str(f'{wpm_val:0.3f}'), str(f'{acc_val:0.2f}')]
         if acc_val % 1 == 0:
             self.accuracy_label.setText(f'ACC: {int(acc_val)}%')
+            data[1] = str(int(acc_val))
         else:
             self.accuracy_label.setText(f'ACC: {acc_val:0.2f}%')
 
+        with open('data.txt', 'a') as f:
+            f.write('\n'.join(data))
+            f.write('\n')
+    
+    def difficulty(self, diff):
+        f = open('paragraphs.txt', 'r').read()
+        difficulties = f.split('CHANGE DIFFICULTY\n')
+        difficulty = difficulties[diff]
+
+        sentences = difficulty.split('BREAK\n')
+        global sentence
+        sentence = random.choice(sentences)
+        sentence = sentence.strip('\n')
+        self.label.setText(sentence)
+        
     def Reset(self):
         print('reset')
         lineEdit.clear()
         self.label.clear()
         self.wpm_label.clear()
         self.accuracy_label.clear()
-
-        sentence = random.choice(self.sentences)
-        sentence = sentence.strip('\n')
-        self.label.setText(sentence)
-        self.start()
+        
+        #self.Reset()
+        #sentence = random.choice(self.sentences)
+        #sentence = sentence.strip('\n')
+        #self.label.setText(sentence)
+        self.worker.stop()
+        self.worker_thread.quit()
+        self.worker_thread.wait()
+        self.__init__()
 
 
 class Worker(QObject):
     finished = pyqtSignal()
+    changed_signal = pyqtSignal(int)
     float_signal = pyqtSignal(float, float)
     
     @pyqtSlot()
@@ -148,6 +169,19 @@ class Worker(QObject):
                 break
         self.finished.emit()
 
+    def change_difficulty(self):
+        check = -1
+        while len(lineEdit.text()) == 0:            
+            if dropDown.currentIndex() == 0 and check != 0:
+                self.changed_signal.emit(0)
+                check = 0
+            elif dropDown.currentIndex() == 1 and check != 1:
+                self.changed_signal.emit(1)
+                check = 1
+            elif dropDown.currentIndex() == 2 and check != 2:
+                self.changed_signal.emit(2)
+                check = 2
+
 
 class Statistics(QWidget):
     def __init__(self):
@@ -173,4 +207,5 @@ if __name__ == "__main__":
 #TODO 2) Collect data from both mods and save it to .txt file, than make statistics from said data
 #TODO 3) opravit v class TS_Test "f = open()" na "with open() as f:"
 #TODO 4) Reset Button
-#TODO 5) Saving WPM and Accuracy to data.txt
+#TODO 5) Graph
+#* IDEA: dynamicly change position of widgets in new thread

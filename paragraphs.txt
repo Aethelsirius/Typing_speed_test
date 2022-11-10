@@ -5,10 +5,24 @@ BREAKn
 A time may come soon, when none will return. Then there will be need of valour without renown, for none shall remember the deeds that are done in the last defence of your homes.
 Yet the deeds will not be less valiant because they are unpraised.
 BREAK
-This line serves as test.
+This easy line serves as test.
 BREAK
-Sentence number one.
+Easy sentence number one.
 BREAK
-Sentence number two.
+Easy sentence number two.
 BREAK
-Line number three.
+Line of ease number three.
+CHANGE DIFFICULTY
+This is medium sentence.
+BREAK
+Medium sentence number one.
+BREAK
+Hi, medium line number two.
+BREAK
+Medium line number three.
+CHANGE DIFFICULTY
+This is hard sentence.
+BREAK
+Hard sentence number one.
+BREAK
+Hard line number two.
