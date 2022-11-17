@@ -1,5 +1,6 @@
-from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QStackedWidget, QPushButton, QSizePolicy, QLabel, QLineEdit, QHBoxLayout, QVBoxLayout, QShortcut, QComboBox
+from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QStackedWidget, QPushButton, QSizePolicy, QLabel, QLineEdit, QHBoxLayout, QVBoxLayout, QShortcut, QComboBox, QGridLayout
 from PyQt5.QtCore import *
+import pyqtgraph as pg
 import sys
 import time
 import random
@@ -18,7 +19,7 @@ class MainWindow(QMainWindow):
         stacked.addWidget(TS_Test())
         stacked.addWidget(Statistics())
  
-        stacked.setCurrentIndex(1)          #* test only
+        stacked.setCurrentIndex(2)          #* test only
 
 
 class Menu(QWidget):
@@ -69,6 +70,7 @@ class TS_Test(QWidget):
         self.label = QLabel()
         self.accuracy_label = QLabel()
         self.wpm_label = QLabel()
+        self.cpm_label = QLabel()
         self.reset_button = QPushButton()
 
         dropDown = QComboBox(self)
@@ -80,22 +82,23 @@ class TS_Test(QWidget):
         self.layout.addWidget(self.label)
         self.layout.addWidget(lineEdit)
         self.layout.addWidget(self.wpm_label)
+        self.layout.addWidget(self.cpm_label)
         self.layout.addWidget(self.accuracy_label)
         self.layout.addWidget(self.reset_button)
         
         self.reset_button.clicked.connect(self.Reset)
-        
+        self.label.setWordWrap(True)
     
         self.layout.setContentsMargins(250,250,250,300)
         self.setLayout(self.layout)                             
                 
-    def update(self, wpm_val, acc_val):
+    def update(self, wpm_val, cpm_val, acc_val):
         self.wpm_label.setText(f'WPM: {wpm_val:0.3f}')
-
-        data = [str(f'{wpm_val:0.3f}'), str(f'{acc_val:0.2f}')]
+        self.cpm_label.setText(f'CPM: {cpm_val:0.3f}')
+        data = [str(f'{wpm_val:0.3f}'), str(f'{cpm_val:0.3f}'), str(f'{acc_val:0.2f}')]
         if acc_val % 1 == 0:
             self.accuracy_label.setText(f'ACC: {int(acc_val)}%')
-            data[1] = str(int(acc_val))
+            data[2] = str(int(acc_val))
         else:
             self.accuracy_label.setText(f'ACC: {acc_val:0.2f}%')
 
@@ -134,7 +137,7 @@ class TS_Test(QWidget):
 class Worker(QObject):
     finished = pyqtSignal()
     changed_signal = pyqtSignal(int)
-    float_signal = pyqtSignal(float, float)
+    float_signal = pyqtSignal(float, float, float)
     
     @pyqtSlot()
     def run(self):
@@ -156,6 +159,7 @@ class Worker(QObject):
                 print(timer)
 
                 wpm = len(written_word) / timer * 60
+                cpm = len(lineEdit.text()) / timer * 60
 
                 for i in range(len(sentence)):
                     if lineEdit.text()[i] == sentence[i]:
@@ -164,12 +168,14 @@ class Worker(QObject):
 
                 print(f"Accuracy = {correct_char / len(sentence) * 100}")
                 print(f'WPM: {wpm:0.3f}')
+                print(f'CPM: {cpm:0.3f}')
                 
-                self.float_signal.emit(wpm, accuracy)
+                self.float_signal.emit(wpm, cpm, accuracy)
                 break
         self.finished.emit()
 
     def change_difficulty(self):
+        time.sleep(0.5)           #?1
         check = -1
         while len(lineEdit.text()) == 0:            
             if dropDown.currentIndex() == 0 and check != 0:
@@ -185,15 +191,54 @@ class Worker(QObject):
 
 class Statistics(QWidget):
     def __init__(self):
-        QWidget.__init__(self)        
+        QWidget.__init__(self)
+        
+        with open('data.txt', 'r') as f:
+            f = f.readlines()
+            self.wpm = []
+            self.cpm = []
+            self.acc = []
+            self.lenght = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+         
+            for i in range(0, 46, 3):
+                if i != 0:
+                    self.wpm.insert(0,float(f[-(i)].strip('\n')))
+            for i in range(2, 47, 3):
+                self.cpm.insert(0,float(f[-(i)].strip('\n')))
+            for i in range(1, 46, 3):
+                self.acc.insert(0,float(f[-(i)].strip('\n')))
+  
         self.initUI()
 
     def initUI(self):
         self.button_back = QPushButton(self)
         self.button_back.clicked.connect(lambda: stacked.setCurrentIndex(0))
-        self.button_back.move(400,300)
-    
+        self.button_back.setText('Back')
+        self.button_back.move(30,20)
 
+        self.wpm_graph = pg.PlotWidget(self)
+        self.cpm_graph = pg.PlotWidget(self)
+        self.acc_graph = pg.PlotWidget(self)
+
+        self.stat_layout = QVBoxLayout()
+        self.stat_layout.addWidget(self.wpm_graph)
+        self.stat_layout.addWidget(self.cpm_graph)
+        self.stat_layout.addWidget(self.acc_graph)
+
+        self.wpm_graph.showGrid(x=True,y=True)
+        self.cpm_graph.showGrid(x=True,y=True)
+        self.acc_graph.showGrid(x=True,y=True)
+
+        self.wpm_graph.plot(self.lenght, self.wpm)
+        self.cpm_graph.plot(self.lenght, self.cpm)
+        self.acc_graph.plot(self.lenght, self.acc)
+
+        self.wpm_graph.setTitle('WPM')
+        self.cpm_graph.setTitle('CPM')
+        self.acc_graph.setTitle('ACC')
+
+        self.stat_layout.setContentsMargins(150,10,50,10)
+        self.setLayout(self.stat_layout)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
@@ -209,3 +254,5 @@ if __name__ == "__main__":
 #TODO 4) Reset Button
 #TODO 5) Graph
 #* IDEA: dynamicly change position of widgets in new thread
+#* IDEA: locknut dropDown ked lineEdit nie je prazdny
+#?1 kod niekedy spracuje worker thread pomalsie a vyhodi to error, kvoli tomu tam je sleep na 0.5s 
