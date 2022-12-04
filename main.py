@@ -18,8 +18,10 @@ class MainWindow(QMainWindow):
         stacked.addWidget(Menu())
         stacked.addWidget(TS_Test())
         stacked.addWidget(Statistics())
+        stacked.addWidget(Login())
+        stacked.addWidget(Register())
  
-        stacked.setCurrentIndex(2)          #* test only
+        stacked.setCurrentIndex(4)          #* test only
 
 
 class Menu(QWidget):
@@ -31,22 +33,37 @@ class Menu(QWidget):
     def initUI(self):
         self.button_test = QPushButton(self)
         self.button_graph = QPushButton(self)
+        self.button_login = QPushButton(self)
+        self.button_register = QPushButton(self)
+
         self.button_test.setFixedWidth(50)
+
+        self.button_test.setText('Test')
+        self.button_graph.setText('Statistics')
+        self.button_login.setText('Login')
+        self.button_register.setText('Register')
 
     
         self.button_test.clicked.connect(lambda: stacked.setCurrentIndex(1))
         self.button_graph.clicked.connect(lambda: stacked.setCurrentIndex(2))
-        self.button_graph.clicked.connect(lambda: print(self.frameSize().width()))
+        self.button_login.clicked.connect(lambda: stacked.setCurrentIndex(3))
+        self.button_register.clicked.connect(lambda: stacked.setCurrentIndex(4))
+        
 
-        self.button_test.move(self.frameSize().width()*50//100-50,200)
+        self.button_test.move(200, 200) 
         self.button_graph.move(200,230)
+        self.button_login.move(1150, 20)
+        self.button_register.move(1150, 50)
     
 
 class TS_Test(QWidget):
     def __init__(self):
         QWidget.__init__(self)     
 
-        self.setStyleSheet("QLabel{font-size: 15px;}")
+        with open("styles.css", 'r') as f:
+            sheet = f.read() 
+        self.setStyleSheet(sheet)
+        # self.setStyleSheet("QLabel{font-size: 15px;}")
 
         self.worker = Worker()
         self.worker_thread = QThread()
@@ -86,7 +103,7 @@ class TS_Test(QWidget):
         self.layout.addWidget(self.accuracy_label)
         self.layout.addWidget(self.reset_button)
         
-        self.reset_button.clicked.connect(self.Reset)
+        self.reset_button.clicked.connect(self.reset)
         self.label.setWordWrap(True)
     
         self.layout.setContentsMargins(250,250,250,300)
@@ -102,36 +119,37 @@ class TS_Test(QWidget):
         else:
             self.accuracy_label.setText(f'ACC: {acc_val:0.2f}%')
 
-        with open('data.txt', 'a') as f:
+        with open('text_files/data.txt', 'a') as f:
             f.write('\n'.join(data))
             f.write('\n')
     
     def difficulty(self, diff):
-        f = open('paragraphs.txt', 'r').read()
-        difficulties = f.split('CHANGE DIFFICULTY\n')
-        difficulty = difficulties[diff]
+        with open('text_files/paragraphs.txt', 'r') as f: 
+            f = f.read()
+            difficulties = f.split('CHANGE DIFFICULTY\n')
+            difficulty = difficulties[diff]
 
-        sentences = difficulty.split('BREAK\n')
-        global sentence
-        sentence = random.choice(sentences)
-        sentence = sentence.strip('\n')
-        self.label.setText(sentence)
+            sentences = difficulty.split('BREAK\n')
+            global sentence
+            sentence = random.choice(sentences)
+            sentence = sentence.strip('\n')
+            self.label.setText(sentence)
         
-    def Reset(self):
+    def reset(self):
         print('reset')
         lineEdit.clear()
-        self.label.clear()
+        self.difficulty(0)
         self.wpm_label.clear()
+        self.cpm_label.clear()
         self.accuracy_label.clear()
         
         #self.Reset()
         #sentence = random.choice(self.sentences)
         #sentence = sentence.strip('\n')
         #self.label.setText(sentence)
-        self.worker.stop()
-        self.worker_thread.quit()
-        self.worker_thread.wait()
-        self.__init__()
+        #self.worker.stop()
+        self.worker.run()
+        
 
 
 class Worker(QObject):
@@ -142,21 +160,20 @@ class Worker(QObject):
     @pyqtSlot()
     def run(self):
         while True:
-            print('important')
+            print('important')         #?2
             if len(lineEdit.text()) > 0 and lineEdit.text()[0] == sentence[0]:
                 timer_start = time.perf_counter()
                 correct_char = 0
                 break
 
         while True:     
-            print('IMPORTANT')
+            print('IMPORTANT')         #?2
             if (len(lineEdit.text()) == len(sentence)) and (lineEdit.text().split()[-1] == sentence.split()[-1]):
                 #print(4)
                 
                 written_word = lineEdit.text().split(' ')
                 timer_stop = time.perf_counter()
                 timer = timer_stop - timer_start
-                print(timer)
 
                 wpm = len(written_word) / timer * 60
                 cpm = len(lineEdit.text()) / timer * 60
@@ -193,7 +210,7 @@ class Statistics(QWidget):
     def __init__(self):
         QWidget.__init__(self)
         
-        with open('data.txt', 'r') as f:
+        with open('text_files/data.txt', 'r') as f:
             f = f.readlines()
             self.wpm = []
             self.cpm = []
@@ -240,6 +257,85 @@ class Statistics(QWidget):
         self.stat_layout.setContentsMargins(150,10,50,10)
         self.setLayout(self.stat_layout)
 
+
+class Login(QWidget):
+    def __init__(self):
+        QWidget.__init__(self)
+        
+        self.initUI()
+
+    def initUI(self):
+        self.button_back = QPushButton(self)  
+        self.button_back.clicked.connect(lambda: stacked.setCurrentIndex(0))
+        self.button_back.move(0,0)
+
+        self.username_label = QLabel(self)
+        self.username_label.setText('Username: ')
+        self.username_label.move(500, 200)
+
+        self.username_entry = QLineEdit(self)
+        self.username_entry.move(500, 220)
+
+        self.password_label = QLabel(self)
+        self.password_label.setText('Password: ')
+        self.password_label.move(500, 250)
+
+        self.password_entry = QLineEdit(self)
+        self.password_entry.move(500, 270)
+        self.password_entry.setEchoMode(QLineEdit.Password)
+
+
+class Register(QWidget):
+    def __init__(self):
+        QWidget.__init__(self)
+
+        self.initUI()
+
+    def initUI(self):
+        self.button_back = QPushButton(self)  
+        self.button_back.clicked.connect(lambda: stacked.setCurrentIndex(0))
+        self.button_back.move(0,0)
+
+        self.set_username_label = QLabel(self)
+        self.set_username_label.setText('Username: ')
+        self.set_username_label.move(500, 200)
+
+        self.set_username_entry = QLineEdit(self)
+        self.set_username_entry.move(500, 220)
+
+        self.set_password_label = QLabel(self)
+        self.set_password_label.setText('Password: ')
+        self.set_password_label.move(500, 250)
+
+        self.set_password_entry = QLineEdit(self)
+        self.set_password_entry.move(500, 270)
+        self.set_password_entry.setEchoMode(QLineEdit.Password)
+
+        self.set_confirm_password_label = QLabel(self)
+        self.set_confirm_password_label.setText('Confirm Password: ')
+        self.set_confirm_password_label.move(500, 300)
+
+        self.set_confirm_password_entry = QLineEdit(self)
+        self.set_confirm_password_entry.move(500, 320)
+        self.set_confirm_password_entry.setEchoMode(QLineEdit.Password)
+        self.set_confirm_password_entry.editingFinished.connect(self.register)
+
+        self.register_button = QPushButton(self)
+        self.register_button.clicked.connect(self.register)
+        self.register_button.move(500, 350)
+
+    def register(self):
+        with open('text_files/user_info.txt', 'r') as f_r:
+            f_r = f_r.read().split('\n')
+            if (self.set_username_entry.text() not in f_r) and (self.set_password_entry.text() == self.set_confirm_password_entry.text()):
+                with open('text_files/user_info.txt', 'a') as f_a:
+                    f_a.write(self.set_username_entry.text() + '\n' + self.set_password_entry.text() + '\n')
+                print('Done')
+            else:
+                print(234)
+                   
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     mainwin = MainWindow()
@@ -248,11 +344,10 @@ if __name__ == "__main__":
 
 
 
-#TODO 1) Menu with two typing mods: 1. basic test 2. training mod similiar to keybr.com
-#TODO 2) Collect data from both mods and save it to .txt file, than make statistics from said data
-#TODO 3) opravit v class TS_Test "f = open()" na "with open() as f:"
-#TODO 4) Reset Button
-#TODO 5) Graph
+#TODO 1) Login
+#TODO 2) Reset Button
+#TODO 3) Update graph right after test is performed
 #* IDEA: dynamicly change position of widgets in new thread
 #* IDEA: locknut dropDown ked lineEdit nie je prazdny
 #?1 kod niekedy spracuje worker thread pomalsie a vyhodi to error, kvoli tomu tam je sleep na 0.5s 
+#?2 bez tychto printov worker thread pada
