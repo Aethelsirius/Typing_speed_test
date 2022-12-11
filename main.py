@@ -1,9 +1,11 @@
-from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QStackedWidget, QPushButton, QSizePolicy, QLabel, QLineEdit, QHBoxLayout, QVBoxLayout, QShortcut, QComboBox, QGridLayout
+from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QStackedWidget, QPushButton, QSizePolicy, QLabel, QLineEdit, QHBoxLayout, QVBoxLayout, QShortcut, QComboBox, QGridLayout, QMessageBox
 from PyQt5.QtCore import *
 import pyqtgraph as pg
 import sys
 import time
 import random
+
+username = ''
 
 
 class MainWindow(QMainWindow):
@@ -21,7 +23,7 @@ class MainWindow(QMainWindow):
         stacked.addWidget(Login())
         stacked.addWidget(Register())
  
-        stacked.setCurrentIndex(4)          #* test only
+        stacked.setCurrentIndex(3)          #* test only
 
 
 class Menu(QWidget):
@@ -119,10 +121,17 @@ class TS_Test(QWidget):
         else:
             self.accuracy_label.setText(f'ACC: {acc_val:0.2f}%')
 
-        with open('text_files/data.txt', 'a') as f:
-            f.write('\n'.join(data))
-            f.write('\n')
-    
+        if username == '':
+            print(1)
+            with open('text_files/user_data/guest_data.txt', 'a') as f:
+                f.write('\n'.join(data))
+                f.write('\n')
+        else:
+            print(2)
+            with open(f'text_files/user_data/{username}_data.txt', 'a') as f:
+                f.write('\n'.join(data))
+                f.write('\n')
+        
     def difficulty(self, diff):
         with open('text_files/paragraphs.txt', 'r') as f: 
             f = f.read()
@@ -209,23 +218,17 @@ class Worker(QObject):
 class Statistics(QWidget):
     def __init__(self):
         QWidget.__init__(self)
+        global wpm, cpm, acc, lenght
+
+        wpm = []
+        cpm = []
+        acc = []
+        lenght = []
+
         
-        with open('text_files/data.txt', 'r') as f:
-            f = f.readlines()
-            self.wpm = []
-            self.cpm = []
-            self.acc = []
-            self.lenght = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
-         
-            for i in range(0, 46, 3):
-                if i != 0:
-                    self.wpm.insert(0,float(f[-(i)].strip('\n')))
-            for i in range(2, 47, 3):
-                self.cpm.insert(0,float(f[-(i)].strip('\n')))
-            for i in range(1, 46, 3):
-                self.acc.insert(0,float(f[-(i)].strip('\n')))
-  
-        self.initUI()
+        self.initUI()        
+        self.update_graph()
+        
 
     def initUI(self):
         self.button_back = QPushButton(self)
@@ -246,9 +249,9 @@ class Statistics(QWidget):
         self.cpm_graph.showGrid(x=True,y=True)
         self.acc_graph.showGrid(x=True,y=True)
 
-        self.wpm_graph.plot(self.lenght, self.wpm)
-        self.cpm_graph.plot(self.lenght, self.cpm)
-        self.acc_graph.plot(self.lenght, self.acc)
+        self.wpm_graph.plot(lenght, wpm)
+        self.cpm_graph.plot(lenght, cpm)
+        self.acc_graph.plot(lenght, acc)
 
         self.wpm_graph.setTitle('WPM')
         self.cpm_graph.setTitle('CPM')
@@ -258,10 +261,47 @@ class Statistics(QWidget):
         self.setLayout(self.stat_layout)
 
 
+    def update_graph(self):
+        if username != '':
+            with open(f'text_files/user_data/{username}_data.txt', 'r') as fi:
+                self.update(fi)
+                     
+        elif username == '':
+            print('empty')
+            with open(f'text_files/user_data/guest_data.txt', 'r') as fi:
+                self.update(fi)
+
+    def update(self, f):
+        f = f.readlines()
+        for i in range(1,len(f)//3+1):
+            print(type(lenght))
+            lenght.append(i)
+        print(lenght)
+        print(len(f)//3)
+
+        for i in range(0, len(f)+1, 3):
+            if i != 0:
+                wpm.insert(0,float(f[-(i)].strip('\n')))
+        for i in range(2, len(f)+2, 3):
+            cpm.insert(0,float(f[-(i)].strip('\n')))
+        for i in range(1, len(f)+1, 3):
+            acc.insert(0,float(f[-(i)].strip('\n')))
+        print(wpm, cpm, acc)
+
+        self.wpm_graph.plot(lenght, wpm)
+        self.cpm_graph.plot(lenght, cpm)
+        self.acc_graph.plot(lenght, acc)
+        
+            
+
+
 class Login(QWidget):
     def __init__(self):
         QWidget.__init__(self)
-        
+
+        # global username
+        # username = ''
+
         self.initUI()
 
     def initUI(self):
@@ -283,6 +323,35 @@ class Login(QWidget):
         self.password_entry = QLineEdit(self)
         self.password_entry.move(500, 270)
         self.password_entry.setEchoMode(QLineEdit.Password)
+
+        self.login_button = QPushButton(self)
+        self.login_button.setText('Login')
+        self.login_button.clicked.connect(self.login)
+        #self.login_button.clicked.connect(Statistics.update_graph)
+        self.login_button.move(500, 310)
+
+        self.msg_box = QMessageBox(self)
+        self.msg_box.setIcon(QMessageBox.Warning)
+        self.msg_box.setWindowTitle('Warning')        
+        self.msg_box.setStandardButtons(QMessageBox.Ok)
+
+    def login(self):
+        with open('text_files/user_info.txt', 'r') as f:
+            f = f.read().split('\n')
+        
+            if self.username_entry.text() in f:
+                if self.password_entry.text() == f[f.index(self.username_entry.text())+1]:
+                    global username
+                    username = self.username_entry.text()
+                    print('login succesful')
+                    print(username)
+                    Statistics.update_graph()
+                else:
+                    self.msg_box.setText('Incorrect password')
+                    self.msg_box.exec_()
+            else:
+                self.msg_box.setText('Username does not exist')
+                self.msg_box.exec_()
 
 
 class Register(QWidget):
@@ -312,27 +381,41 @@ class Register(QWidget):
         self.set_password_entry.setEchoMode(QLineEdit.Password)
 
         self.set_confirm_password_label = QLabel(self)
-        self.set_confirm_password_label.setText('Confirm Password: ')
+        self.set_confirm_password_label.setText('Confirmation Password: ')
         self.set_confirm_password_label.move(500, 300)
 
         self.set_confirm_password_entry = QLineEdit(self)
         self.set_confirm_password_entry.move(500, 320)
         self.set_confirm_password_entry.setEchoMode(QLineEdit.Password)
-        self.set_confirm_password_entry.editingFinished.connect(self.register)
+        #self.set_confirm_password_entry.editingFinished.connect(self.register)
 
         self.register_button = QPushButton(self)
+        self.register_button.setText('Register')
         self.register_button.clicked.connect(self.register)
         self.register_button.move(500, 350)
+
+        self.msg_box = QMessageBox(self)
+        self.msg_box.setIcon(QMessageBox.Warning)
+        self.msg_box.setWindowTitle('Warning')        
+        self.msg_box.setStandardButtons(QMessageBox.Ok)
 
     def register(self):
         with open('text_files/user_info.txt', 'r') as f_r:
             f_r = f_r.read().split('\n')
-            if (self.set_username_entry.text() not in f_r) and (self.set_password_entry.text() == self.set_confirm_password_entry.text()):
-                with open('text_files/user_info.txt', 'a') as f_a:
-                    f_a.write(self.set_username_entry.text() + '\n' + self.set_password_entry.text() + '\n')
-                print('Done')
+            if self.set_username_entry.text() != '' and self.set_password_entry.text() != '' and self.set_confirm_password_entry.text() != '':
+                if (self.set_username_entry.text() not in f_r) and (self.set_password_entry.text() == self.set_confirm_password_entry.text()):
+                    with open('text_files/user_info.txt', 'a') as f_a:
+                        f_a.write(self.set_username_entry.text() + '\n' + self.set_password_entry.text() + '\n')
+                    print('Done')
+                elif self.set_username_entry.text() in f_r:
+                    self.msg_box.setText('Username already exists')
+                    self.msg_box.exec_()
+                elif self.set_password_entry.text() != self.set_confirm_password_entry.text():
+                    self.msg_box.setText('Your password and confirmation password do not match')
+                    self.msg_box.exec_()
             else:
-                print(234)
+                self.msg_box.setText('Field can not be empty')
+                self.msg_box.exec_()
                    
 
 
