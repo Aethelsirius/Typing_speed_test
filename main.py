@@ -23,7 +23,7 @@ class MainWindow(QMainWindow):
         stacked.addWidget(Login())
         stacked.addWidget(Register())
  
-        stacked.setCurrentIndex(3)          #* test only
+        stacked.setCurrentIndex(0)          #* test only
 
 
 class Menu(QWidget):
@@ -48,6 +48,7 @@ class Menu(QWidget):
     
         self.button_test.clicked.connect(lambda: stacked.setCurrentIndex(1))
         self.button_graph.clicked.connect(lambda: stacked.setCurrentIndex(2))
+        # self.button_graph.clicked.connect(Statistics().graph)
         self.button_login.clicked.connect(lambda: stacked.setCurrentIndex(3))
         self.button_register.clicked.connect(lambda: stacked.setCurrentIndex(4))
         
@@ -59,6 +60,7 @@ class Menu(QWidget):
     
 
 class TS_Test(QWidget):
+    quit_thread = pyqtSignal()
     def __init__(self):
         QWidget.__init__(self)     
 
@@ -73,6 +75,7 @@ class TS_Test(QWidget):
         self.worker.float_signal.connect(self.update)
         self.worker.moveToThread(self.worker_thread)
         self.worker.finished.connect(self.worker_thread.quit)
+        self.quit_thread.connect(self.worker_thread.quit)
         self.worker_thread.started.connect(self.worker.change_difficulty)
         self.worker_thread.started.connect(self.worker.run)
         self.worker_thread.start()
@@ -105,7 +108,10 @@ class TS_Test(QWidget):
         self.layout.addWidget(self.accuracy_label)
         self.layout.addWidget(self.reset_button)
         
+        # self.reset_button.clicked.connect(self.worker_thread.quit)
         self.reset_button.clicked.connect(self.reset)
+        self.reset_button.setText('Reset')
+
         self.label.setWordWrap(True)
     
         self.layout.setContentsMargins(250,250,250,300)
@@ -143,7 +149,7 @@ class TS_Test(QWidget):
             sentence = random.choice(sentences)
             sentence = sentence.strip('\n')
             self.label.setText(sentence)
-        
+
     def reset(self):
         print('reset')
         lineEdit.clear()
@@ -156,8 +162,14 @@ class TS_Test(QWidget):
         #sentence = random.choice(self.sentences)
         #sentence = sentence.strip('\n')
         #self.label.setText(sentence)
-        #self.worker.stop()
-        self.worker.run()
+        # self.worker.stop()
+        # self.worker_thread.quit()
+        #self.worker.change_difficulty()
+        #self.worker.run()
+        # self.worker_thread.wait()
+        # self.quit_thread.emit()
+        Worker().skuska()
+        print('stop')
         
 
 
@@ -170,6 +182,7 @@ class Worker(QObject):
     def run(self):
         while True:
             print('important')         #?2
+            print('importaant')
             if len(lineEdit.text()) > 0 and lineEdit.text()[0] == sentence[0]:
                 timer_start = time.perf_counter()
                 correct_char = 0
@@ -213,6 +226,11 @@ class Worker(QObject):
             elif dropDown.currentIndex() == 2 and check != 2:
                 self.changed_signal.emit(2)
                 check = 2
+    #@classmethod
+    def skuska(self):
+        print('skuska')
+        self.quit()
+        self.finished.emit()
 
 
 class Statistics(QWidget):
@@ -249,9 +267,9 @@ class Statistics(QWidget):
         self.cpm_graph.showGrid(x=True,y=True)
         self.acc_graph.showGrid(x=True,y=True)
 
-        self.wpm_graph.plot(lenght, wpm)
-        self.cpm_graph.plot(lenght, cpm)
-        self.acc_graph.plot(lenght, acc)
+        # self.wpm_graph.plot(lenght, wpm)
+        # self.cpm_graph.plot(lenght, cpm)
+        # self.acc_graph.plot(lenght, acc)
 
         self.wpm_graph.setTitle('WPM')
         self.cpm_graph.setTitle('CPM')
@@ -259,7 +277,6 @@ class Statistics(QWidget):
 
         self.stat_layout.setContentsMargins(150,10,50,10)
         self.setLayout(self.stat_layout)
-
 
     def update_graph(self):
         if username != '':
@@ -273,11 +290,14 @@ class Statistics(QWidget):
 
     def update(self, f):
         f = f.readlines()
+        global wpm, cpm, acc, lenght
+        wpm = []
+        cpm = []
+        acc = []
+        lenght = []
+
         for i in range(1,len(f)//3+1):
-            print(type(lenght))
             lenght.append(i)
-        print(lenght)
-        print(len(f)//3)
 
         for i in range(0, len(f)+1, 3):
             if i != 0:
@@ -286,11 +306,17 @@ class Statistics(QWidget):
             cpm.insert(0,float(f[-(i)].strip('\n')))
         for i in range(1, len(f)+1, 3):
             acc.insert(0,float(f[-(i)].strip('\n')))
-        print(wpm, cpm, acc)
+        print(wpm, cpm, acc, lenght)
+        
+        print(f'username: "{username}"')
+
+        self.wpm_graph.clear()
+        self.cpm_graph.clear()
+        self.acc_graph.clear()
 
         self.wpm_graph.plot(lenght, wpm)
         self.cpm_graph.plot(lenght, cpm)
-        self.acc_graph.plot(lenght, acc)
+        self.acc_graph.plot(lenght, acc)   
         
             
 
@@ -345,7 +371,8 @@ class Login(QWidget):
                     username = self.username_entry.text()
                     print('login succesful')
                     print(username)
-                    Statistics.update_graph()
+                    Statistics().update_graph()
+                    stacked.setCurrentIndex(0)
                 else:
                     self.msg_box.setText('Incorrect password')
                     self.msg_box.exec_()
