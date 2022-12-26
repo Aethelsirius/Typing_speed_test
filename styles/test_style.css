@@ -1,0 +1,30 @@
+QLabel {
+  font-size: 18px;
+  border: 1px solid gray;
+  text-align: center;
+}
+
+QPushButton {
+  background-color: #88a6af;
+  border-radius: 10px;
+  padding: 5px 15px;
+  font-size: 18px;
+  border: 1px solid transparent;
+  border: 1px solid #000;
+}
+
+QPushButton:hover {
+  /* border: 1px solid #88a6af; */
+  background-color: #b6deeb;
+}
+
+QComboBox {
+  background: #88a6af;
+  border: 1px solid #000000;
+  border-radius: 5px;
+  padding: 5px 10px;
+}
+
+QComboBox::drop-down {
+  border-image: url(img/drop_down_img.png);
+}

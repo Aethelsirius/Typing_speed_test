@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QStackedWidget, QPushButton, QSizePolicy, QLabel, QLineEdit, QHBoxLayout, QVBoxLayout, QShortcut, QComboBox, QGridLayout, QMessageBox
-from PyQt5.QtCore import *
+from PyQt6.QtWidgets import QWidget, QMainWindow, QApplication, QStackedWidget, QPushButton, QLabel, QLineEdit, QVBoxLayout, QComboBox, QMessageBox
+from PyQt6.QtCore import *
 import pyqtgraph as pg
 import sys
 import time
@@ -25,38 +25,61 @@ class MainWindow(QMainWindow):
  
         stacked.setCurrentIndex(0)          #* test only
 
+        with open("styles/main_style.css", 'r') as f:
+            self.setStyleSheet(f.read())
+
 
 class Menu(QWidget):
     def __init__(self):
         QWidget.__init__(self)
         self.frameWidth = self.frameSize().width()
-        self.frameHeight = self.frameSize().height() 
+        self.frameHeight = self.frameSize().height()
+
+        with open("styles/menu_style.css", 'r') as f:
+            self.setStyleSheet(f.read())
+
         self.initUI()
     def initUI(self):
         self.button_test = QPushButton(self)
         self.button_graph = QPushButton(self)
         self.button_login = QPushButton(self)
         self.button_register = QPushButton(self)
-
-        self.button_test.setFixedWidth(50)
+        self.head_label = QLabel(self)
 
         self.button_test.setText('Test')
         self.button_graph.setText('Statistics')
         self.button_login.setText('Login')
         self.button_register.setText('Register')
-
+        self.head_label.setText('Typing Speed Test')
     
         self.button_test.clicked.connect(lambda: stacked.setCurrentIndex(1))
         self.button_graph.clicked.connect(lambda: stacked.setCurrentIndex(2))
         # self.button_graph.clicked.connect(Statistics().graph)
         self.button_login.clicked.connect(lambda: stacked.setCurrentIndex(3))
         self.button_register.clicked.connect(lambda: stacked.setCurrentIndex(4))
+        # self.button_register.clicked.connect(self.logged_in)
         
 
-        self.button_test.move(200, 200) 
-        self.button_graph.move(200,230)
-        self.button_login.move(1150, 20)
-        self.button_register.move(1150, 50)
+        self.button_test.move(575, 300) 
+        self.button_graph.move(575, 360)
+        self.button_login.move(1170, 20)
+        self.button_register.move(1170, 60)
+        self.head_label.move(234, 150)
+
+        self.button_test.setProperty('class', 'one')
+        self.button_graph.setProperty('class', 'one')
+        self.button_login.setProperty('class', 'two')
+        self.button_register.setProperty('class', 'two')
+
+        self.button_test.setFixedWidth(130)
+        self.button_graph.setFixedWidth(130)
+        self.button_login.setFixedWidth(90)
+        self.button_register.setFixedWidth(90)
+
+    def logged_in(self):
+        print('logged in')
+        self.button_login.setText(username)
+        self.button_register.hide()
     
 
 class TS_Test(QWidget):
@@ -64,11 +87,9 @@ class TS_Test(QWidget):
     def __init__(self):
         QWidget.__init__(self)     
 
-        with open("styles.css", 'r') as f:
-            sheet = f.read() 
-        self.setStyleSheet(sheet)
-        # self.setStyleSheet("QLabel{font-size: 15px;}")
-
+        with open("styles/test_style.css", 'r') as f:
+            self.setStyleSheet(f.read())
+        
         self.worker = Worker()
         self.worker_thread = QThread()
         self.worker.changed_signal.connect(self.difficulty)
@@ -85,38 +106,39 @@ class TS_Test(QWidget):
     def initUI(self):
         self.button_back = QPushButton(self)
         self.button_back.clicked.connect(lambda: stacked.setCurrentIndex(0))
-        self.button_back.move(30,50)
+        self.button_back.move(30,30)
+        self.button_back.setText('Back')
 
         global lineEdit, dropDown
-        lineEdit = QLineEdit()
-        self.label = QLabel()
-        self.accuracy_label = QLabel()
-        self.wpm_label = QLabel()
-        self.cpm_label = QLabel()
-        self.reset_button = QPushButton()
+        lineEdit = QLineEdit(self)
+        self.label = QLabel(self)
+        self.accuracy_label = QLabel(self)
+        self.wpm_label = QLabel(self)
+        self.cpm_label = QLabel(self)
+        self.reset_button = QPushButton(self)
 
         dropDown = QComboBox(self)
         dropDown.addItems(['Easy','Medium','Hard'])
+        dropDown.move(70,250)
 
+        lineEdit.move(440, 260)
+        self.wpm_label.move(575, 300)
+        self.cpm_label.move(575, 330)
+        self.accuracy_label.move(575, 360)
+        self.reset_button.move(603, 410)
 
-        self.layout = QVBoxLayout(self)
+        self.label.setGeometry(440, 200, 400, 50)
 
-        self.layout.addWidget(self.label)
-        self.layout.addWidget(lineEdit)
-        self.layout.addWidget(self.wpm_label)
-        self.layout.addWidget(self.cpm_label)
-        self.layout.addWidget(self.accuracy_label)
-        self.layout.addWidget(self.reset_button)
-        
-        # self.reset_button.clicked.connect(self.worker_thread.quit)
+        lineEdit.setFixedWidth(400)
+        self.wpm_label.setFixedWidth(130)
+        self.cpm_label.setFixedWidth(130)
+        self.accuracy_label.setFixedWidth(130)
+
         self.reset_button.clicked.connect(self.reset)
         self.reset_button.setText('Reset')
 
         self.label.setWordWrap(True)
-    
-        self.layout.setContentsMargins(250,250,250,300)
-        self.setLayout(self.layout)                             
-                
+                    
     def update(self, wpm_val, cpm_val, acc_val):
         self.wpm_label.setText(f'WPM: {wpm_val:0.3f}')
         self.cpm_label.setText(f'CPM: {cpm_val:0.3f}')
@@ -243,6 +265,8 @@ class Statistics(QWidget):
         acc = []
         lenght = []
 
+        with open("styles/statistics_style.css", 'r') as f:
+            self.setStyleSheet(f.read())
         
         self.initUI()        
         self.update_graph()
@@ -281,6 +305,9 @@ class Statistics(QWidget):
     def update_graph(self):
         if username != '':
             with open(f'text_files/user_data/{username}_data.txt', 'r') as fi:
+                self.wpm_graph.clear()
+                self.cpm_graph.clear()
+                self.acc_graph.clear()
                 self.update(fi)
                      
         elif username == '':
@@ -309,14 +336,10 @@ class Statistics(QWidget):
         print(wpm, cpm, acc, lenght)
         
         print(f'username: "{username}"')
-
-        self.wpm_graph.clear()
-        self.cpm_graph.clear()
-        self.acc_graph.clear()
-
+        
         self.wpm_graph.plot(lenght, wpm)
         self.cpm_graph.plot(lenght, cpm)
-        self.acc_graph.plot(lenght, acc)   
+        self.acc_graph.plot(lenght, acc)
         
             
 
@@ -328,38 +351,44 @@ class Login(QWidget):
         # global username
         # username = ''
 
+        with open("styles/login&reg_style.css", 'r') as f:
+            self.setStyleSheet(f.read())
+
         self.initUI()
 
     def initUI(self):
         self.button_back = QPushButton(self)  
         self.button_back.clicked.connect(lambda: stacked.setCurrentIndex(0))
-        self.button_back.move(0,0)
+        self.button_back.move(30, 30)
+        self.button_back.setText('Back')
 
         self.username_label = QLabel(self)
-        self.username_label.setText('Username: ')
-        self.username_label.move(500, 200)
+        self.username_label.setText('Username')
+        self.username_label.move(553, 200)
 
         self.username_entry = QLineEdit(self)
-        self.username_entry.move(500, 220)
+        self.username_entry.move(553, 225)
+        self.username_entry.setFixedWidth(175)
 
         self.password_label = QLabel(self)
-        self.password_label.setText('Password: ')
-        self.password_label.move(500, 250)
+        self.password_label.setText('Password')
+        self.password_label.move(553, 270)
 
         self.password_entry = QLineEdit(self)
-        self.password_entry.move(500, 270)
-        self.password_entry.setEchoMode(QLineEdit.Password)
+        self.password_entry.move(553, 295)
+        self.password_entry.setEchoMode(QLineEdit.EchoMode.Password)
+        self.password_entry.setFixedWidth(175)
 
         self.login_button = QPushButton(self)
         self.login_button.setText('Login')
         self.login_button.clicked.connect(self.login)
         #self.login_button.clicked.connect(Statistics.update_graph)
-        self.login_button.move(500, 310)
+        self.login_button.move(602, 350)
 
         self.msg_box = QMessageBox(self)
-        self.msg_box.setIcon(QMessageBox.Warning)
+        self.msg_box.setIcon(QMessageBox.Icon.Warning)
         self.msg_box.setWindowTitle('Warning')        
-        self.msg_box.setStandardButtons(QMessageBox.Ok)
+        self.msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
 
     def login(self):
         with open('text_files/user_info.txt', 'r') as f:
@@ -372,59 +401,67 @@ class Login(QWidget):
                     print('login succesful')
                     print(username)
                     Statistics().update_graph()
+                    Menu().logged_in()
                     stacked.setCurrentIndex(0)
                 else:
                     self.msg_box.setText('Incorrect password')
-                    self.msg_box.exec_()
+                    self.msg_box.exec()
             else:
                 self.msg_box.setText('Username does not exist')
-                self.msg_box.exec_()
+                self.msg_box.exec()
 
 
 class Register(QWidget):
     def __init__(self):
         QWidget.__init__(self)
 
+        with open("styles/login&reg_style.css", 'r') as f:
+            self.setStyleSheet(f.read())
+
         self.initUI()
 
     def initUI(self):
         self.button_back = QPushButton(self)  
         self.button_back.clicked.connect(lambda: stacked.setCurrentIndex(0))
-        self.button_back.move(0,0)
+        self.button_back.move(30, 30)
+        self.button_back.setText('Back')
 
         self.set_username_label = QLabel(self)
-        self.set_username_label.setText('Username: ')
-        self.set_username_label.move(500, 200)
+        self.set_username_label.setText('Username')
+        self.set_username_label.move(553, 200)
 
         self.set_username_entry = QLineEdit(self)
-        self.set_username_entry.move(500, 220)
+        self.set_username_entry.move(553, 225)
+        self.set_username_entry.setFixedWidth(175)
 
         self.set_password_label = QLabel(self)
-        self.set_password_label.setText('Password: ')
-        self.set_password_label.move(500, 250)
+        self.set_password_label.setText('Password')
+        self.set_password_label.move(553, 270)
 
         self.set_password_entry = QLineEdit(self)
-        self.set_password_entry.move(500, 270)
-        self.set_password_entry.setEchoMode(QLineEdit.Password)
+        self.set_password_entry.move(553, 295)
+        self.set_password_entry.setEchoMode(QLineEdit.EchoMode.Password)
+        self.set_password_entry.setFixedWidth(175)
 
         self.set_confirm_password_label = QLabel(self)
-        self.set_confirm_password_label.setText('Confirmation Password: ')
-        self.set_confirm_password_label.move(500, 300)
+        self.set_confirm_password_label.setText('Confirmation Password')
+        self.set_confirm_password_label.move(553, 340)
 
         self.set_confirm_password_entry = QLineEdit(self)
-        self.set_confirm_password_entry.move(500, 320)
-        self.set_confirm_password_entry.setEchoMode(QLineEdit.Password)
+        self.set_confirm_password_entry.move(553, 365)
+        self.set_confirm_password_entry.setEchoMode(QLineEdit.EchoMode.Password)
         #self.set_confirm_password_entry.editingFinished.connect(self.register)
+        self.set_confirm_password_entry.setFixedWidth(175)
 
         self.register_button = QPushButton(self)
         self.register_button.setText('Register')
         self.register_button.clicked.connect(self.register)
-        self.register_button.move(500, 350)
+        self.register_button.move(593, 420)
 
         self.msg_box = QMessageBox(self)
-        self.msg_box.setIcon(QMessageBox.Warning)
+        self.msg_box.setIcon(QMessageBox.Icon.Warning)
         self.msg_box.setWindowTitle('Warning')        
-        self.msg_box.setStandardButtons(QMessageBox.Ok)
+        self.msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
 
     def register(self):
         with open('text_files/user_info.txt', 'r') as f_r:
@@ -436,13 +473,13 @@ class Register(QWidget):
                     print('Done')
                 elif self.set_username_entry.text() in f_r:
                     self.msg_box.setText('Username already exists')
-                    self.msg_box.exec_()
+                    self.msg_box.exec()
                 elif self.set_password_entry.text() != self.set_confirm_password_entry.text():
                     self.msg_box.setText('Your password and confirmation password do not match')
-                    self.msg_box.exec_()
+                    self.msg_box.exec()
             else:
                 self.msg_box.setText('Field can not be empty')
-                self.msg_box.exec_()
+                self.msg_box.exec()
                    
 
 
@@ -450,14 +487,12 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     mainwin = MainWindow()
     mainwin.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 
-#TODO 1) Login
-#TODO 2) Reset Button
-#TODO 3) Update graph right after test is performed
-#* IDEA: dynamicly change position of widgets in new thread
+#TODO 1) Reset Button
+#TODO 2) Update graph right after test is performed
 #* IDEA: locknut dropDown ked lineEdit nie je prazdny
 #?1 kod niekedy spracuje worker thread pomalsie a vyhodi to error, kvoli tomu tam je sleep na 0.5s 
 #?2 bez tychto printov worker thread pada

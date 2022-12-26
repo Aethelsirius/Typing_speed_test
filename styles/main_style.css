@@ -1,0 +1,9 @@
+QWidget {
+  background-color: #435a66;
+}
+
+QLineEdit {
+  background-color: #88a6af;
+  border: 1px solid #000;
+  border-radius: 5px;
+}
